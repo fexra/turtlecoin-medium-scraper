@@ -35,10 +35,10 @@ const articles = require('./source/articles.json');
             const date = scrapedArticle.published.split('-');
 
             const distFolder = join(__dirname, '/dist/');
-            const yearFolder = join(__dirname, '/dist/' + date[0]);
-            const monthFolder = join(__dirname, './dist/' + date[0] + '/' + date[1]);
-            const articleFolder = join(__dirname, './dist/' + date[0] + '/' + date[1] + '/' + slugify(scrapedArticle.title));
-            const imagesFolder = join(__dirname, './dist/' + date[0] + '/' + date[1] + '/' + slugify(scrapedArticle.title) + '/images');
+            const yearFolder = join(distFolder, date[0]);
+            const monthFolder = join(yearFolder, date[1]);
+            const articleFolder = join(monthFolder, slugify(scrapedArticle.title));
+            const imagesFolder = join(articleFolder, 'images');
 
             // create the folders if they don't exist
             if (!fs.existsSync(distFolder)) fs.mkdirSync(distFolder);
