@@ -16,6 +16,20 @@ const articles = require("./source/articles.json");
 // Initialize
 (async () => {
   try {
+
+    // setup `dist` folder and `dist/images``
+    const distFolder = join(__dirname, "dist");
+    const articlesFolder = join(distFolder, "articles");
+    const imagesFolder = join(distFolder, "images");
+
+    // create the folders if they don't exist
+    if (!fs.existsSync(distFolder)) fs.mkdirSync(distFolder);
+    if (!fs.existsSync(articlesFolder)) fs.mkdirSync(articlesFolder);
+    if (!fs.existsSync(imagesFolder)) fs.mkdirSync(imagesFolder);
+      
+
+    
+    // cycle through the medium URLs
     console.log(`Scraping ${articles.length} blog articles`);
 
     let articleCount = 1;
@@ -27,22 +41,6 @@ const articles = require("./source/articles.json");
       let scrapedArticle = await extract(article.url);
 
       if (!scrapedArticle) continue;
-
-      // setup `year/month/{{article-slug}}/images` folder structure
-      const date = scrapedArticle.published.split("-");
-
-      const distFolder = join(__dirname, "/dist/");
-      const yearFolder = join(distFolder, date[0]);
-      const monthFolder = join(yearFolder, date[1]);
-      const articleFolder = join(monthFolder, slugify(scrapedArticle.title));
-      const imagesFolder = join(articleFolder, "images");
-
-      // create the folders if they don't exist
-      if (!fs.existsSync(distFolder)) fs.mkdirSync(distFolder);
-      if (!fs.existsSync(yearFolder)) fs.mkdirSync(yearFolder);
-      if (!fs.existsSync(monthFolder)) fs.mkdirSync(monthFolder);
-      if (!fs.existsSync(articleFolder)) fs.mkdirSync(articleFolder);
-      if (!fs.existsSync(imagesFolder)) fs.mkdirSync(imagesFolder);
 
       // convert article content to markdown
       let markdown = NodeHtmlMarkdown.translate(scrapedArticle.content);
@@ -104,22 +102,30 @@ const articles = require("./source/articles.json");
         }
       );
 
-      // replace external image urls with the scraped internal ones
+      // replace external image urls with the scraped internal jekyll ones
       markdown = markdown.replace(
         /!\[\]\(.*\/(.*)\)(\n\n)/g,
         function (match, fileName) {
           if (!fileName.includes("q=20")) {
-            return "![](./images/" + sanitize(basename(fileName)) + ")\n\n";
+            return "![]({{ site.baseurl }}/images/" + sanitize(basename(fileName)) + ")\n\n";
           } else {
             return "";
           }
         }
       );
 
+      // add jekyll template to the start of the markdown
+
+      markdown =  '---\nlayout: post\n---\n\n' + markdown
+
       // store article
+      const artitleDate = scrapedArticle.published.substring(0,10);
+      const articleTitle = article.url.match(/([^\/]+$)/)[0].replace(/[^-]+$/,'').slice(0, -1)
+          
       const convertedArticle = await fs.createWriteStream(
-        `${articleFolder}/index.md`
+        `${articlesFolder}/${artitleDate}-${articleTitle}.md`
       );
+      
       convertedArticle.write(markdown);
 
       articleCount++;
