@@ -26,8 +26,6 @@ const articles = require("./source/articles.json");
     if (!fs.existsSync(distFolder)) fs.mkdirSync(distFolder);
     if (!fs.existsSync(articlesFolder)) fs.mkdirSync(articlesFolder);
     if (!fs.existsSync(imagesFolder)) fs.mkdirSync(imagesFolder);
-      
-
     
     // cycle through the medium URLs
     console.log(`Scraping ${articles.length} blog articles`);
@@ -70,18 +68,24 @@ const articles = require("./source/articles.json");
         let fileName = sanitize(basename(imageUrl));
         let filePath = join(imagesFolder, fileName);
 
-        const file = await fs.createWriteStream(filePath);
+        if (!fs.existsSync(filePath)) {
 
-        try {
-          // download image
-          await https.get(imageUrl, function (response) {
-            response.pipe(file);
-          });
-        } catch (e) {
-          console.warn(`Error downloading image ${imageUrl}`);
+          const file = await fs.createWriteStream(filePath);
+
+          try {
+            // download image
+            await https.get(imageUrl, function (response) {
+              response.pipe(file);
+            });
+          } catch (e) {
+            console.warn(`Error downloading image ${imageUrl}`);
+          }
+
+          imageCount++;
         }
-
-        imageCount++;
+        else {
+          console.log(`Image already downloaded`);
+        }
       }
 
       console.log(
@@ -92,14 +96,7 @@ const articles = require("./source/articles.json");
 
       //remove medium header (avatar, author and cleanup date)
       markdown = markdown.replace(
-        /\[(.*)\].*-----(.*)--------------------------------\)(\n\n)/g,
-        function (match, hit) {
-          if (hit.endsWith("read")) {
-            return hit.split("·")[0] + "\n\n---\n\n";
-          } else {
-            return "";
-          }
-        }
+        /\[(.*)\].*-----(.*)--------------------------------\)(\n\n)/g, ''
       );
 
       // replace external image urls with the scraped internal jekyll ones
@@ -113,17 +110,24 @@ const articles = require("./source/articles.json");
           }
         }
       );
+      
+      // remove title and add (jekyll style)
+      markdown = markdown.replace(/^#.*$/m, '');
 
       // add jekyll template to the start of the markdown
+      let imageUrl = scrapedArticle.image.split('/')
+          imageUrl = imageUrl[imageUrl.length - 1];
+          imageUrl = sanitize(basename(imageUrl))
+          imageUrl = '{{ site.baseurl }}/images/' + imageUrl
 
-      markdown =  '---\nlayout: post\n---\n\n' + markdown
+      markdown =  `---\nlayout: 'post' \ntitle: '${scrapedArticle.title}' \ndescription: '${scrapedArticle.description}' \nimage: '${imageUrl}' \ndate: '${scrapedArticle.published}' \n---` + markdown
 
       // store article
+      const articleSlug = article.url.match(/([^\/]+$)/)[0].replace(/[^-]+$/,'').slice(0, -1)
       const artitleDate = scrapedArticle.published.substring(0,10);
-      const articleTitle = article.url.match(/([^\/]+$)/)[0].replace(/[^-]+$/,'').slice(0, -1)
           
       const convertedArticle = await fs.createWriteStream(
-        `${articlesFolder}/${artitleDate}-${articleTitle}.md`
+        `${articlesFolder}/${artitleDate}-${articleSlug}.md`
       );
       
       convertedArticle.write(markdown);

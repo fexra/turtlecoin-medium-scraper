@@ -1,7 +1,7 @@
 {
-  "name": "turtlecoin-medium-scraper",
+  "name": "turtlecoin-medium-to-jekyll",
   "version": "0.1.0",
-  "description": "Scrape and convert Medium articles to Markdown",
+  "description": "Scrape and convert Medium articles to Markdown Jekyll friendly.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
